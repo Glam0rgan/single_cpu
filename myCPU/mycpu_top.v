@@ -192,7 +192,8 @@ assign src2_is_4  =  inst_jirl | inst_bl;
 
 assign imm = src2_is_4 ? 32'h4                      :
              need_si20 ? {i20[19:0], 12'b0}         :
-/*need_ui5 || need_si12*/{{20{i12[11]}}, i12[11:0]} ;
+             need_si12 ? {{20{i12[11]}}, i12[11:0]} :
+             { 27'b0, i12[4:0]};
 
 assign br_offs = need_si26 ? {{ 4{i26[25]}}, i26[25:0]} :
                              {{14{i16[15]}}, i16[15:0]} ;
@@ -208,15 +209,15 @@ assign src2_is_imm   = inst_slli_w |
                        inst_srai_w |					   
                        inst_addi_w |					   
                        inst_jirl   |
-					   
-					   
-					   
+					   inst_lu12i_w |
+					   inst_ld_w |
+					   inst_st_w |
                        inst_bl     ;
 					   
 
 assign res_from_mem  = inst_ld_w;
 assign dst_is_r1     = inst_bl;
-assign gr_we         = ~inst_st_w & ~inst_beq & ~inst_bne & ~inst_b & ~inst_bl;
+assign gr_we         = ~inst_st_w & ~inst_beq & ~inst_bne & ~inst_b;
 assign mem_we        = inst_st_w;
 assign dest          = dst_is_r1 ? 5'd1 : rd;
 
@@ -240,11 +241,11 @@ assign rj_eq_rd = (rj_value == rkd_value);
 assign br_taken = (   inst_beq  &&  rj_eq_rd
                    || inst_bne  && !rj_eq_rd
                    || inst_jirl
-                  
+                   || inst_bl
                    || inst_b
 				   
                   ) && valid;
-assign br_target = (inst_beq || inst_bne  || inst_b) ? (pc + br_offs) :
+assign br_target = (inst_beq || inst_bne  || inst_b || inst_bl) ? (pc + br_offs) :
                                                    /*inst_jirl*/ (rj_value + jirl_offs);
 
 assign alu_src1 = src1_is_pc  ? pc[31:0] : rj_value;
